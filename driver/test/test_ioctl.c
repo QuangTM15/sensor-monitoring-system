@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,39 @@
 #define SMS_IOCTL_SET_INTERVAL _IO(SMS_IOCTL_MAGIC, 1)
 #define SMS_IOCTL_GET_INTERVAL _IO(SMS_IOCTL_MAGIC, 2)
 
+#define SMS_DEFAULT_INTERVAL_MS 2000UL
+
+static int parse_interval(const char *text,
+                          unsigned long *interval)
+{
+    char *end_pointer;
+    unsigned long parsed_value;
+
+    if ((text == NULL) || (interval == NULL))
+    {
+        return -1;
+    }
+
+    errno = 0;
+    end_pointer = NULL;
+
+    parsed_value = strtoul(text,
+                           &end_pointer,
+                           10);
+
+    if ((errno != 0) ||
+        (end_pointer == text) ||
+        (*end_pointer != '\0') ||
+        (parsed_value > UINT_MAX))
+    {
+        return -1;
+    }
+
+    *interval = parsed_value;
+
+    return 0;
+}
+
 int main(int argc,
          char *argv[])
 {
@@ -20,13 +54,30 @@ int main(int argc,
     int file_descriptor;
     int result;
 
-    requested_interval = 2000UL;
+    requested_interval = SMS_DEFAULT_INTERVAL_MS;
 
-    if (argc >= 2)
+    if (argc > 2)
     {
-        requested_interval = strtoul(argv[1],
-                                     NULL,
-                                     10);
+        fprintf(stderr,
+                "Usage: %s [interval_ms]\n",
+                argv[0]);
+
+        return 1;
+    }
+
+    if (argc == 2)
+    {
+        result = parse_interval(argv[1],
+                                &requested_interval);
+
+        if (result < 0)
+        {
+            fprintf(stderr,
+                    "Invalid interval value: %s\n",
+                    argv[1]);
+
+            return 1;
+        }
     }
 
     file_descriptor = open(SMS_DEVICE_PATH,
