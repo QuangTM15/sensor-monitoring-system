@@ -1,8 +1,3 @@
-# ============================================================
-# Sensor Monitoring System
-# Linux Kernel Module Makefile
-# ============================================================
-
 MODULE_NAME := sms_sensor
 
 KERNEL_DIR := $(HOME)/embedded_lab1/kernel/linux-5.15
@@ -13,7 +8,9 @@ obj-m += $(MODULE_NAME).o
 
 $(MODULE_NAME)-objs := \
 	src/sms_sensor.o \
-	src/sms_fops.o
+	src/sms_fops.o \
+	src/sms_ioctl.o \
+	src/sms_procfs.o
 
 ccflags-y += -I$(src)/inc
 

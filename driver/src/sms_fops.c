@@ -3,17 +3,28 @@
 #include <linux/module.h>
 
 #include "sms_fops.h"
+#include "sms_ioctl.h"
 #include "sms_sensor.h"
 
-static int sms_open(struct inode *inode, struct file *file)
+static int sms_open(struct inode *inode,
+                    struct file *file)
 {
+    (void)inode;
+    (void)file;
+
+    sms_stats.open_count++;
+
     pr_info("[sms_sensor] Device opened.\n");
 
     return 0;
 }
 
-static int sms_release(struct inode *inode, struct file *file)
+static int sms_release(struct inode *inode,
+                       struct file *file)
 {
+    (void)inode;
+    (void)file;
+
     pr_info("[sms_sensor] Device closed.\n");
 
     return 0;
@@ -27,9 +38,12 @@ static ssize_t sms_read(struct file *file,
     struct sms_sensor_data data;
     char kernel_buffer[64];
     int message_length;
-    int result;
+    ssize_t result;
+
+    (void)file;
 
     result = sms_generate_sensor_data(&data);
+
     if (result < 0)
     {
         return result;
@@ -41,11 +55,18 @@ static ssize_t sms_read(struct file *file,
                                data.temperature,
                                data.humidity);
 
-    return simple_read_from_buffer(user_buffer,
-                                   buffer_length,
-                                   offset,
-                                   kernel_buffer,
-                                   message_length);
+    result = simple_read_from_buffer(user_buffer,
+                                     buffer_length,
+                                     offset,
+                                     kernel_buffer,
+                                     message_length);
+
+    if (result > 0)
+    {
+        sms_stats.read_count++;
+    }
+
+    return result;
 }
 
 const struct file_operations sms_fops =
@@ -53,4 +74,5 @@ const struct file_operations sms_fops =
         .owner = THIS_MODULE,
         .open = sms_open,
         .read = sms_read,
-        .release = sms_release};
+        .release = sms_release,
+        .unlocked_ioctl = sms_ioctl};
